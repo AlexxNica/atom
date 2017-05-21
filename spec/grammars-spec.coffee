@@ -35,8 +35,8 @@ describe "the `grammars` global", ->
       expect(atom.grammars.selectGrammar('test.txt').scopeName).toBe 'text.plain'
 
     it "selects a grammar based on the file path case insensitively", ->
-      expect(atom.grammars.selectGrammar('/tmp/source.coffee').scopeName).toBe 'source.coffee'
-      expect(atom.grammars.selectGrammar('/tmp/source.COFFEE').scopeName).toBe 'source.coffee'
+      expect(atom.grammars.selectGrammar(path.join(temp.dir, 'source.coffee')).scopeName).toBe 'source.coffee'
+      expect(atom.grammars.selectGrammar(path.join(temp.dir, 'source.COFFEE')).scopeName).toBe 'source.coffee'
 
     describe "on Windows", ->
       originalPlatform = null
@@ -49,18 +49,19 @@ describe "the `grammars` global", ->
         Object.defineProperty process, 'platform', value: originalPlatform
 
       it "normalizes back slashes to forward slashes when matching the fileTypes", ->
-        expect(atom.grammars.selectGrammar('something\\.git\\config').scopeName).toBe 'source.git-config'
+        expect(atom.grammars.selectGrammar(path.win32.join('something', '.git', 'config')).scopeName).toBe 'source.git-config'
 
     it "can use the filePath to load the correct grammar based on the grammar's filetype", ->
-      waitsForPromise ->
-        atom.packages.activatePackage('language-git')
+      expect(atom.grammars.selectGrammar("file.js").name).toBe "JavaScript" # based on extension (.js)
+      expect(atom.grammars.selectGrammar(path.join(temp.dir, '.git', 'config')).name).toBe "Git Config" # based on end of the path (.git/config)
+      expect(atom.grammars.selectGrammar("Rakefile").name).toBe "Ruby" # based on the file's basename (Rakefile)
+      expect(atom.grammars.selectGrammar("curb").name).toBe "Null Grammar"
+      expect(atom.grammars.selectGrammar(path.join('hu.git', 'config')).name).toBe "Null Grammar"
 
-      runs ->
-        expect(atom.grammars.selectGrammar("file.js").name).toBe "JavaScript" # based on extension (.js)
-        expect(atom.grammars.selectGrammar(path.join(temp.dir, '.git', 'config')).name).toBe "Git Config" # based on end of the path (.git/config)
-        expect(atom.grammars.selectGrammar("Rakefile").name).toBe "Ruby" # based on the file's basename (Rakefile)
-        expect(atom.grammars.selectGrammar("curb").name).toBe "Null Grammar"
-        expect(atom.grammars.selectGrammar("/hu.git/config").name).toBe "Null Grammar"
+    it "does not treat a period in a directory as a separate path component", ->
+      atom.config.set('core.customFileTypes', 'source.git-config': ['git/config'])
+      expect(atom.grammars.selectGrammar(path.join('hu.git', 'config')).name).toBe "Null Grammar"
+      expect(atom.grammars.selectGrammar(path.join('something', 'git', 'config')).name).toBe "Git Config"
 
     it "uses the filePath's shebang line if the grammar cannot be determined by the extension or basename", ->
       filePath = require.resolve("./fixtures/shebang")
@@ -128,7 +129,7 @@ describe "the `grammars` global", ->
     describe "when the user has custom grammar file types", ->
       it "considers the custom file types as well as those defined in the grammar", ->
         atom.config.set('core.customFileTypes', 'source.ruby': ['Cheffile'])
-        expect(atom.grammars.selectGrammar('build/Cheffile', 'cookbook "postgres"').scopeName).toBe 'source.ruby'
+        expect(atom.grammars.selectGrammar(path.join('build', 'Cheffile'), 'cookbook "postgres"').scopeName).toBe 'source.ruby'
 
       it "favors user-defined file types over built-in ones of equal length", ->
         atom.config.set('core.customFileTypes',

@@ -3,8 +3,7 @@ FirstMate = require 'first-mate'
 Token = require './token'
 fs = require 'fs-plus'
 Grim = require 'grim'
-
-PathSplitRegex = new RegExp("[/.]")
+path = require 'path'
 
 # Extended: Syntax class holding the grammars used for tokenizing.
 #
@@ -55,9 +54,9 @@ class GrammarRegistry extends FirstMate.GrammarRegistry
 
   getGrammarPathScore: (grammar, filePath) ->
     return -1 unless filePath
-    filePath = filePath.replace(/\\/g, '/') if process.platform is 'win32'
 
-    pathComponents = filePath.toLowerCase().split(PathSplitRegex)
+    pathComponents = filePath.toLowerCase().split(path.sep)
+    pathComponents.push(pathComponents.pop().split('.')...)
     pathScore = -1
 
     fileTypes = grammar.fileTypes
@@ -65,7 +64,8 @@ class GrammarRegistry extends FirstMate.GrammarRegistry
       fileTypes = fileTypes.concat(customFileTypes)
 
     for fileType, i in fileTypes
-      fileTypeComponents = fileType.toLowerCase().split(PathSplitRegex)
+      fileTypeComponents = fileType.toLowerCase().split('/') # All filetypes should be using POSIX path separators
+      fileTypeComponents.push(fileTypeComponents.pop().split('.')...)
       pathSuffix = pathComponents[-fileTypeComponents.length..-1]
       if _.isEqual(pathSuffix, fileTypeComponents)
         pathScore = Math.max(pathScore, fileType.length)
